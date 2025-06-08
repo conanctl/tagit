@@ -1,0 +1,23 @@
+[package]
+name = "pathbrain"
+version = "0.1.0"
+edition = "2021"
+description = "A frictionless path management tool that helps you organize and find directories using tags"
+repository = "https://github.com/conanctl/tagit"
+keywords = ["cli", "filesystem", "organization", "tags", "utility"]
+categories = ["command-line-utilities", "filesystem"]
+readme = "README.md"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+rusqlite = { version = "0.30", features = ["bundled"] }
+thiserror = "1.0"
+chrono = "0.4"
+dirs = "5.0"
+colored = "2.1"
+tabled = "0.15"
+humantime = "2.1"
+anyhow = "1.0.98"
+repository = "0.0.2"
+directories = "5"
+fuzzy-matcher = "0.3"
