@@ -191,21 +191,14 @@ impl Cli {
                 }
             }
             
-            Commands::Search { tag, fuzzy, scores } => {
+            Commands::Search { tag, scores } => {
                 let all_tags = db::list_all_tags(&conn)?;
-                let matching_tags: Vec<_> = if *fuzzy {
-                    all_tags.iter()
-                        .filter_map(|t| {
-                            matcher.fuzzy_match(t, tag)
-                                .map(|score| (t, score))
-                        })
-                        .collect()
-                } else {
-                    all_tags.iter()
-                        .filter(|t| t.contains(tag))
-                        .map(|t| (t, 0))
-                        .collect()
-                };
+                let matching_tags: Vec<_> = all_tags.iter()
+                    .filter_map(|t| {
+                        matcher.fuzzy_match(t, tag)
+                            .map(|score| (t, score))
+                    })
+                    .collect();
 
                 if matching_tags.is_empty() {
                     println!("{}", "No matching tags found".yellow());
@@ -243,9 +236,9 @@ impl Cli {
                 }
             }
 
-            Commands::Remove { path, tags } => {
+            Commands::Remove { path, tags, fuzzy: _ } => {
                 let resolved_path = resolve_path(path.clone())?;
-                if let Some(tags) = tags {
+                if !tags.is_empty() {
                     db::remove_tags_from_path(&mut conn, &resolved_path, tags)?;
                     println!("{} {} {} {}",
                         "✓".green().bold(),
