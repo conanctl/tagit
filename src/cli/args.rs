@@ -12,7 +12,7 @@ pub struct Cli {
 pub enum Commands {
     Tag {
         #[arg(required = true)]
-        tags: Vec<String>,
+        tags: String,
 
         #[arg(short, long)]
         path: Option<String>,
@@ -36,7 +36,7 @@ pub enum Commands {
     
     #[command(alias = "untag")]
     Remove {
-        tags: Vec<String>,
+        tags: Option<String>,
 
         #[arg(short, long)]
         path: Option<String>,
