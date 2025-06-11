@@ -26,6 +26,9 @@
 .env
 .env.local
 
+# Notes file
+notes.txt
+
 # Debug files
 *.pdb
 
