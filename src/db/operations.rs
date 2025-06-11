@@ -1,6 +1,26 @@
 use rusqlite::Connection;
 use crate::error::{Result, PathBrainError};
 use super::models::PathEntry;
+use std::path::PathBuf;
+use directories::ProjectDirs;
+use super::schema::setup_schema;
+
+pub fn get_database_path() -> Result<PathBuf> {
+    let proj_dirs = ProjectDirs::from("com", "pathbrain", "pathbrain")
+        .ok_or_else(|| PathBrainError::Other("Could not determine project directories".to_string()))?;
+    
+    let data_dir = proj_dirs.data_dir();
+    std::fs::create_dir_all(data_dir)?;
+    
+    Ok(data_dir.join("pathbrain.db"))
+}
+
+pub fn open_db() -> Result<Connection> {
+    let db_path = get_database_path()?;
+    let conn = Connection::open(db_path)?;
+    setup_schema(&conn)?;
+    Ok(conn)
+}
 
 pub fn create_path_tag_entry(conn: &mut Connection, path: &str, tags: &[String], timestamp: i64) -> Result<()> {
     let tx = conn.transaction()?;
