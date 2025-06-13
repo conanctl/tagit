@@ -53,7 +53,7 @@ impl Cli {
         let matcher = SkimMatcherV2::default();
 
         match &self.command {
-            Commands::Tag { path, message } => {
+            Commands::Add { path, message } => {
                 let resolved_path = resolve_path(Some(path.clone()))?;
                 let tags_vec = vec![message.clone()];
                 db::create_path_tag_entry(&mut conn, &resolved_path, &tags_vec, now())?;
