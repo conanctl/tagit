@@ -1,4 +1,4 @@
-use pathbrain::cli::{Cli, Commands};
+use tagit::cli::{Cli, Commands};
 use clap::Parser;
 
 fn parse_args(args: &[&str]) -> Cli {
@@ -7,7 +7,7 @@ fn parse_args(args: &[&str]) -> Cli {
 
 #[test]
 fn test_tag_command() {
-    let cli = parse_args(&["pb", "tag", "/test/path", "need to implement caching"]);
+    let cli = parse_args(&["tag", "tag", "/test/path", "need to implement caching"]);
     match cli.command {
         Commands::Tag { path, message } => {
             assert_eq!(path, "/test/path");
@@ -16,7 +16,7 @@ fn test_tag_command() {
         _ => panic!("Expected Tag command"),
     }
 
-    let cli = parse_args(&["pb", "tag", ".", "work in progress"]);
+    let cli = parse_args(&["tag", "tag", ".", "work in progress"]);
     match cli.command {
         Commands::Tag { path, message } => {
             assert_eq!(path, ".");
@@ -28,7 +28,7 @@ fn test_tag_command() {
 
 #[test]
 fn test_list_command() {
-    let cli = parse_args(&["pb", "list"]);
+    let cli = parse_args(&["tag", "list"]);
     match cli.command {
         Commands::List { pattern, fuzzy } => {
             assert!(pattern.is_none());
@@ -37,7 +37,7 @@ fn test_list_command() {
         _ => panic!("Expected List command"),
     }
 
-    let cli = parse_args(&["pb", "list", "filter"]);
+    let cli = parse_args(&["tag", "list", "filter"]);
     match cli.command {
         Commands::List { pattern, fuzzy } => {
             assert_eq!(pattern.unwrap(), "filter");
@@ -46,7 +46,7 @@ fn test_list_command() {
         _ => panic!("Expected List command"),
     }
 
-    let cli = parse_args(&["pb", "ls", "filter"]);
+    let cli = parse_args(&["tag", "ls", "filter"]);
     match cli.command {
         Commands::List { pattern, fuzzy } => {
             assert_eq!(pattern.unwrap(), "filter");
@@ -58,7 +58,7 @@ fn test_list_command() {
 
 #[test]
 fn test_search_command() {
-    let cli = parse_args(&["pb", "search", "searchtag"]);
+    let cli = parse_args(&["tag", "search", "searchtag"]);
     match cli.command {
         Commands::Search { tag, scores } => {
             assert_eq!(tag, "searchtag");
@@ -67,7 +67,7 @@ fn test_search_command() {
         _ => panic!("Expected Search command"),
     }
 
-    let cli = parse_args(&["pb", "find", "searchtag"]);
+    let cli = parse_args(&["tag", "find", "searchtag"]);
     match cli.command {
         Commands::Search { tag, scores } => {
             assert_eq!(tag, "searchtag");
@@ -79,7 +79,7 @@ fn test_search_command() {
 
 #[test]
 fn test_remove_command() {
-    let cli = parse_args(&["pb", "remove", "need to implement caching", "-p", "/test/path"]);
+    let cli = parse_args(&["tag", "remove", "need to implement caching", "-p", "/test/path"]);
     match cli.command {
         Commands::Remove { path, tags, fuzzy } => {
             assert_eq!(path, Some("/test/path".to_string()));
@@ -89,7 +89,7 @@ fn test_remove_command() {
         _ => panic!("Expected Remove command"),
     }
 
-    let cli = parse_args(&["pb", "remove"]);
+    let cli = parse_args(&["tag", "remove"]);
     match cli.command {
         Commands::Remove { path, tags, fuzzy } => {
             assert!(path.is_none());
@@ -99,7 +99,7 @@ fn test_remove_command() {
         _ => panic!("Expected Remove command"),
     }
 
-    let cli = parse_args(&["pb", "untag", "work in progress", "--path", "/test/path"]);
+    let cli = parse_args(&["tag", "untag", "work in progress", "--path", "/test/path"]);
     match cli.command {
         Commands::Remove { path, tags, fuzzy } => {
             assert_eq!(path, Some("/test/path".to_string()));
@@ -112,7 +112,7 @@ fn test_remove_command() {
 
 #[test]
 fn test_special_characters_in_args() {
-    let cli = parse_args(&["pb", "tag", "/path with spaces/", "tag with spaces and @#$% symbols"]);
+    let cli = parse_args(&["tag", "tag", "/path with spaces/", "tag with spaces and @#$% symbols"]);
     match cli.command {
         Commands::Tag { path, message } => {
             assert_eq!(path, "/path with spaces/");
@@ -124,7 +124,7 @@ fn test_special_characters_in_args() {
 
 #[test]
 fn test_unicode_in_args() {
-    let cli = parse_args(&["pb", "tag", "/路径/パス/경로", "标签 タグ 태그"]);
+    let cli = parse_args(&["tag", "tag", "/路径/パス/경로", "标签 タグ 태그"]);
     match cli.command {
         Commands::Tag { path, message } => {
             assert_eq!(path, "/路径/パス/경로");
@@ -139,7 +139,7 @@ fn test_long_arguments() {
     let long_path = "/".repeat(100);
     let long_tag = "a".repeat(100);
     
-    let cli = parse_args(&["pb", "tag", &long_path, &long_tag]);
+    let cli = parse_args(&["tag", "tag", &long_path, &long_tag]);
     match cli.command {
         Commands::Tag { path, message } => {
             assert_eq!(path, long_path);
@@ -151,7 +151,7 @@ fn test_long_arguments() {
 
 #[test]
 fn test_command_error_cases() {
-    assert!(Cli::try_parse_from(&["pb", "tag"]).is_err());
-    assert!(Cli::try_parse_from(&["pb", "search"]).is_err());
-    assert!(Cli::try_parse_from(&["pb", "find"]).is_err());
+    assert!(Cli::try_parse_from(&["tag", "tag"]).is_err());
+    assert!(Cli::try_parse_from(&["tag", "search"]).is_err());
+    assert!(Cli::try_parse_from(&["tag", "find"]).is_err());
 } 

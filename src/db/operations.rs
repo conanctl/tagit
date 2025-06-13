@@ -1,18 +1,18 @@
 use rusqlite::Connection;
-use crate::error::{Result, PathBrainError};
+use crate::error::{Result, TagItError};
 use super::models::PathEntry;
 use std::path::PathBuf;
 use directories::ProjectDirs;
 use super::schema::setup_schema;
 
 pub fn get_database_path() -> Result<PathBuf> {
-    let proj_dirs = ProjectDirs::from("com", "pathbrain", "pathbrain")
-        .ok_or_else(|| PathBrainError::Other("Could not determine project directories".to_string()))?;
+    let proj_dirs = ProjectDirs::from("com", "tagit", "tagit")
+        .ok_or_else(|| TagItError::Other("Could not determine project directories".to_string()))?;
     
     let data_dir = proj_dirs.data_dir();
     std::fs::create_dir_all(data_dir)?;
     
-    Ok(data_dir.join("pathbrain.db"))
+    Ok(data_dir.join("tagit.db"))
 }
 
 pub fn open_db() -> Result<Connection> {
@@ -118,7 +118,7 @@ pub fn list_paths(conn: &Connection) -> Result<Vec<PathEntry>> {
 
 pub fn remove_tags_from_path(conn: &mut Connection, path: &str, tags: &[String]) -> Result<()> {
     let path_id = get_path(conn, path)?
-        .ok_or_else(|| PathBrainError::PathNotFound(path.to_string()))?
+        .ok_or_else(|| TagItError::PathNotFound(path.to_string()))?
         .id
         .unwrap();
 
@@ -135,7 +135,7 @@ pub fn remove_tags_from_path(conn: &mut Connection, path: &str, tags: &[String])
 
 pub fn remove_all_tags_from_path(conn: &mut Connection, path: &str) -> Result<()> {
     let path_id = get_path(conn, path)?
-        .ok_or_else(|| PathBrainError::PathNotFound(path.to_string()))?
+        .ok_or_else(|| TagItError::PathNotFound(path.to_string()))?
         .id
         .unwrap();
 

@@ -1,8 +1,8 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
-#[command(name = "pb")]
-#[command(about = "A frictionless path management tool", long_about = None)]
+#[command(name = "tag")]
+#[command(about = "A frictionless file tagging tool", long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,

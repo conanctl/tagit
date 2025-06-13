@@ -444,24 +444,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pathbrain"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "colored",
- "directories",
- "dirs",
- "fuzzy-matcher",
- "humantime",
- "repository",
- "rusqlite",
- "tabled",
- "thiserror",
-]
-
-[[package]]
 name = "pkg-config"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -612,6 +594,24 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "tagit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "colored",
+ "directories",
+ "dirs",
+ "fuzzy-matcher",
+ "humantime",
+ "repository",
+ "rusqlite",
+ "tabled",
+ "thiserror",
 ]
 
 [[package]]

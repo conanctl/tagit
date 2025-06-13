@@ -1,6 +1,6 @@
-use pathbrain::db;
-use pathbrain::utils::now;
-use pathbrain::error::PathBrainError;
+use tagit::db;
+use tagit::utils::now;
+use tagit::error::TagItError;
 use rusqlite::Connection;
 use std::sync::Once;
 
@@ -117,7 +117,7 @@ fn test_error_cases() {
     assert!(db::get_path(&conn, "/nonexistent").unwrap().is_none());
 
     let result = db::remove_all_tags_from_path(&mut conn, "/nonexistent");
-    assert!(matches!(result.unwrap_err(), PathBrainError::PathNotFound(_)));
+    assert!(matches!(result.unwrap_err(), TagItError::PathNotFound(_)));
 
     let empty_tags: Vec<String> = vec![];
     db::create_path_tag_entry(&mut conn, "/test/path", &empty_tags, ts).unwrap();
@@ -180,10 +180,10 @@ fn test_tag_removal_error_cases() {
 
     let nonexistent_path = "/nonexistent/path";
     let result = db::remove_tags_from_path(&mut conn, nonexistent_path, &vec!["tag".to_string()]);
-    assert!(matches!(result.unwrap_err(), PathBrainError::PathNotFound(_)));
+    assert!(matches!(result.unwrap_err(), TagItError::PathNotFound(_)));
 
     let result = db::remove_all_tags_from_path(&mut conn, nonexistent_path);
-    assert!(matches!(result.unwrap_err(), PathBrainError::PathNotFound(_)));
+    assert!(matches!(result.unwrap_err(), TagItError::PathNotFound(_)));
 
     db::create_path_tag_entry(&mut conn, path, &vec!["existing".to_string()], ts).unwrap();
     let result = db::remove_tags_from_path(&mut conn, path, &vec!["nonexistent".to_string()]);

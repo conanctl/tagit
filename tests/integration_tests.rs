@@ -1,5 +1,5 @@
-use pathbrain::db;
-use pathbrain::utils::now;
+use tagit::db;
+use tagit::utils::now;
 use std::sync::Once;
 
 static INIT: Once = Once::new();

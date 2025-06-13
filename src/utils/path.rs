@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::env;
-use crate::error::{Result, PathBrainError};
+use crate::error::{Result, TagItError};
 
 pub fn resolve_path(path: Option<String>) -> Result<String> {
     let path = match path {
@@ -14,7 +14,7 @@ pub fn resolve_path(path: Option<String>) -> Result<String> {
 
     let path = if path.starts_with('~') {
         let home = dirs::home_dir()
-            .ok_or_else(|| PathBrainError::HomeDirNotFound)?;
+            .ok_or_else(|| TagItError::HomeDirNotFound)?;
         let path = path.strip_prefix("~").unwrap();
         let path = path.strip_prefix('/').unwrap_or(path);
         home.join(path)
@@ -29,7 +29,7 @@ pub fn resolve_path(path: Option<String>) -> Result<String> {
     };
 
     let path = path.canonicalize()
-        .map_err(|_| PathBrainError::InvalidPath(path.to_string_lossy().into_owned()))?;
+        .map_err(|_| TagItError::InvalidPath(path.to_string_lossy().into_owned()))?;
 
     Ok(path.to_string_lossy().into_owned())
 }
