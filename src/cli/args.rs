@@ -18,24 +18,11 @@ pub enum Commands {
         message: String,
     },
     
-    #[command(alias = "ls")]
-    List {
+    Ls {
         pattern: Option<String>,
-
-        #[arg(short, long)]
-        fuzzy: bool,
     },
     
-    #[command(alias = "find")]
-    Search {
-        tag: String,
-
-        #[arg(short, long)]
-        scores: bool,
-    },
-    
-    #[command(alias = "untag")]
-    Remove {
+    Rm {
         tags: Option<String>,
 
         #[arg(short, long)]
