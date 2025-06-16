@@ -21,3 +21,9 @@ anyhow = "1.0.98"
 repository = "0.0.2"
 directories = "5"
 fuzzy-matcher = "0.3"
+shell-escape = "0.1.5"
+
+[dev-dependencies]
+tempfile = "3.8.1"
+assert_cmd = "2.0.12"
+predicates = "3.0.4"

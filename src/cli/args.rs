@@ -31,4 +31,13 @@ pub enum Commands {
         #[arg(short, long)]
         fuzzy: bool,
     },
+
+    Jump {
+        pattern: Option<String>,
+    },
+
+    Init {
+        #[arg(long, default_value = "zsh")]
+        shell: String,
+    },
 } 
