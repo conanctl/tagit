@@ -6,7 +6,6 @@ use super::args::{Cli, Commands};
 use colored::*;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
-use std::fs;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use shell_escape;
@@ -204,6 +203,25 @@ impl Cli {
             }
 
             Commands::Jump { pattern } => {
+                if std::env::var("TAGIT_SHELL_INTEGRATION").is_err() {
+                    eprintln!("{}", "Shell integration not found.".yellow());
+                    eprintln!("For the jump command to work, you need to add the following to your shell configuration file (e.g., ~/.zshrc, ~/.bashrc):");
+                    println!("\n{}", format!(r#"
+function tag() {{
+    if [ "$1" = "jump" ]; then
+        local output
+        output="$(TAGIT_SHELL_INTEGRATION=1 {} "$@")"
+        if [[ -n "$output" && "$output" != ":" ]]; then
+            eval "$output"
+        fi
+    else
+        command {} "$@"
+    fi
+}}
+"#, std::env::current_exe()?.display(), std::env::current_exe()?.display()).bright_black());
+                    return Ok(());
+                }
+
                 let paths = db::list_paths(&conn)?;
                 let mut enhanced_entries = Vec::new();
                 let matcher = SkimMatcherV2::default();
@@ -294,30 +312,6 @@ impl Cli {
                     }
                 } else {
                     println!(":");
-                }
-            }
-
-            Commands::Init { shell } => {
-                match shell.as_str() {
-                    "zsh" | "bash" => {
-                        println!(r#"
-function tag() {{
-    if [ "$1" = "jump" ]; then
-        local output
-        output="$({} "$@")"
-        if [ -n "$output" ]; then
-            eval "$output"
-        fi
-    else
-        {} "$@"
-    fi
-}}
-"#, std::env::current_exe()?.display(), std::env::current_exe()?.display());
-                    }
-                    _ => {
-                        eprintln!("Unsupported shell: {}", shell);
-                        eprintln!("Currently supported shells: zsh, bash");
-                    }
                 }
             }
         }
