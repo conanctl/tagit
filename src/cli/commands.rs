@@ -179,27 +179,25 @@ impl Cli {
                 }
             }
             
-            Commands::Rm { path, tags, fuzzy: _ } => {
-                let resolved_path = resolve_path(path.clone())?;
-                if let Some(tags) = tags {
-                    if !tags.is_empty() {
-                        let tags_vec = vec![tags.clone()];
-                        db::remove_tags_from_path(&mut conn, &resolved_path, &tags_vec)?;
-                        println!("{} {} {} {}",
-                            "✓".green().bold(),
-                            "Removed tags from".green(),
-                            resolved_path.blue().underline(),
-                            format!("[{}]", tags).yellow()
-                        );
-                        return Ok(());
-                    }
+            Commands::Rm { path, tags } => {
+                let resolved_path = resolve_path(Some(path.clone()))?;
+                
+                if tags.is_empty() {
+                    db::remove_path(&mut conn, &resolved_path)?;
+                    println!("{} {} {}",
+                        "✓".green().bold(),
+                        "Removed entry".green(),
+                        resolved_path.blue().underline()
+                    );
+                } else {
+                    db::remove_tags_from_path(&mut conn, &resolved_path, &tags)?;
+                    println!("{} {} {} {}",
+                        "✓".green().bold(),
+                        "Removed tags from".green(),
+                        resolved_path.blue().underline(),
+                        format!("[{}]", tags.join(", ")).yellow()
+                    );
                 }
-                db::remove_all_tags_from_path(&mut conn, &resolved_path)?;
-                println!("{} {} {}",
-                    "✓".green().bold(),
-                    "Removed all tags from".green(),
-                    resolved_path.blue().underline()
-                );
             }
 
             Commands::Jump { pattern } => {

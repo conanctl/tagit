@@ -92,11 +92,8 @@ fn test_remove_workflow() {
     assert!(remaining_tags.contains(&"tag2".to_string()));
     assert!(remaining_tags.contains(&"tag4".to_string()));
 
-    db::remove_all_tags_from_path(&mut conn, &path_str).unwrap();
-
-    let final_tags = db::get_tags_for_path(&conn, path_record.id.unwrap()).unwrap();
-    assert!(final_tags.is_empty());
-    assert!(db::path_exists(&conn, &path_str).unwrap());
+    db::remove_path(&mut conn, &path_str).unwrap();
+    assert!(!db::path_exists(&conn, &path_str).unwrap());
 }
 
 #[test]
@@ -128,7 +125,7 @@ fn test_error_workflow() {
     let ts = now();
 
     assert!(db::get_path(&conn, "/nonexistent").unwrap().is_none());
-    assert!(db::remove_all_tags_from_path(&mut conn, "/nonexistent").is_err());
+    assert!(db::remove_path(&mut conn, "/nonexistent").is_ok());
 
     let path = "/test/error/path";
     let path_str = path.to_string();

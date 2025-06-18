@@ -23,13 +23,10 @@ pub enum Commands {
     },
     
     Rm {
-        tags: Option<String>,
+        #[arg(required = true)]
+        path: String,
 
-        #[arg(short, long)]
-        path: Option<String>,
-
-        #[arg(short, long)]
-        fuzzy: bool,
+        tags: Vec<String>,
     },
 
     Jump {

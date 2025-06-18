@@ -116,6 +116,19 @@ pub fn list_paths(conn: &Connection) -> Result<Vec<PathEntry>> {
     Ok(paths)
 }
 
+pub fn remove_path(conn: &mut Connection, path: &str) -> Result<()> {
+    let path_id = match get_path_id(conn, path)? {
+        Some(id) => id,
+        None => return Ok(()),
+    };
+
+    let tx = conn.transaction()?;
+    tx.execute("DELETE FROM tags WHERE path_id = ?1", [path_id])?;
+    tx.execute("DELETE FROM paths WHERE id = ?1", [path_id])?;
+    tx.commit()?;
+    Ok(())
+}
+
 pub fn remove_tags_from_path(conn: &mut Connection, path: &str, tags: &[String]) -> Result<()> {
     let path_id = get_path(conn, path)?
         .ok_or_else(|| TagItError::PathNotFound(path.to_string()))?
@@ -130,16 +143,6 @@ pub fn remove_tags_from_path(conn: &mut Connection, path: &str, tags: &[String])
         )?;
     }
     tx.commit()?;
-    Ok(())
-}
-
-pub fn remove_all_tags_from_path(conn: &mut Connection, path: &str) -> Result<()> {
-    let path_id = get_path(conn, path)?
-        .ok_or_else(|| TagItError::PathNotFound(path.to_string()))?
-        .id
-        .unwrap();
-
-    conn.execute("DELETE FROM tags WHERE path_id = ?1", [path_id])?;
     Ok(())
 }
 
