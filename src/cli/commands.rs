@@ -1,6 +1,6 @@
 use clap::Parser;
 use crate::db;
-use crate::utils::{now, resolve_path};
+use crate::utils::{now, resolve_path, format_path_for_display};
 use crate::error::Result;
 use super::args::{Cli, Commands};
 use colored::*;
@@ -55,7 +55,7 @@ fn format_path_for_fzf(entry: &EnhancedPathEntry) -> String {
     };
     
     format!("{}{}{} {}", 
-        entry.path,
+        format_path_for_display(&entry.path),
         freq_indicator,
         tags_display,
         time_ago
@@ -79,7 +79,7 @@ impl Cli {
                 println!("{} {} {} {}", 
                     "✓".green().bold(),
                     "Tagged".green(),
-                    resolved_path.blue().underline(),
+                    format_path_for_display(&resolved_path).blue().underline(),
                     format!("[{}]", message).yellow()
                 );
             }
@@ -171,7 +171,7 @@ impl Cli {
                     
                     println!("{} {} {}{} {}",
                         "•".bright_black(),
-                        entry.path.blue().underline(),
+                        format_path_for_display(&entry.path).blue().underline(),
                         freq_indicator,
                         tags_display,
                         time_ago.bright_black().italic()
@@ -187,14 +187,14 @@ impl Cli {
                     println!("{} {} {}",
                         "✓".green().bold(),
                         "Removed entry".green(),
-                        resolved_path.blue().underline()
+                        format_path_for_display(&resolved_path).blue().underline()
                     );
                 } else {
                     db::remove_tags_from_path(&mut conn, &resolved_path, &tags)?;
                     println!("{} {} {} {}",
                         "✓".green().bold(),
                         "Removed tags from".green(),
-                        resolved_path.blue().underline(),
+                        format_path_for_display(&resolved_path).blue().underline(),
                         format!("[{}]", tags.join(", ")).yellow()
                     );
                 }

@@ -31,6 +31,17 @@ pub fn resolve_path(path: Option<String>) -> Result<String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
+pub fn format_path_for_display(path: &str) -> String {
+    if let Some(home_dir) = dirs::home_dir() {
+        if let Some(home_str) = home_dir.to_str() {
+            if path.starts_with(home_str) {
+                return path.replacen(home_str, "~", 1);
+            }
+        }
+    }
+    path.to_string()
+}
+
 pub fn is_git_repo(path: &str) -> bool {
     let path = Path::new(path);
     let mut current = Some(path);
