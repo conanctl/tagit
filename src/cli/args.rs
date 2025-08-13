@@ -31,9 +31,6 @@ pub enum Commands {
         tag: String,
 
         #[arg(short, long)]
-        fuzzy: bool,
-
-        #[arg(short, long)]
         scores: bool,
     },
     

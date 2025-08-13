@@ -60,9 +60,8 @@ fn test_list_command() {
 fn test_search_command() {
     let cli = parse_args(&["pb", "search", "searchtag"]);
     match cli.command {
-        Commands::Search { tag, fuzzy, scores } => {
+        Commands::Search { tag, scores } => {
             assert_eq!(tag, "searchtag");
-            assert!(!fuzzy);
             assert!(!scores);
         }
         _ => panic!("Expected Search command"),
@@ -70,9 +69,8 @@ fn test_search_command() {
 
     let cli = parse_args(&["pb", "find", "searchtag"]);
     match cli.command {
-        Commands::Search { tag, fuzzy, scores } => {
+        Commands::Search { tag, scores } => {
             assert_eq!(tag, "searchtag");
-            assert!(!fuzzy);
             assert!(!scores);
         }
         _ => panic!("Expected Search command"),
