@@ -56,12 +56,13 @@ impl Cli {
         match &self.command {
             Commands::Tag { path, tags } => {
                 let resolved_path = resolve_path(path.clone())?;
-                db::create_path_tag_entry(&mut conn, &resolved_path, tags, now())?;
+                let tags_vec = vec![tags.clone()];
+                db::create_path_tag_entry(&mut conn, &resolved_path, &tags_vec, now())?;
                 println!("{} {} {} {}", 
                     "✓".green().bold(),
                     "Tagged".green(),
                     resolved_path.blue().underline(),
-                    format!("[{}]", tags.join(", ")).yellow()
+                    format!("[{}]", tags).yellow()
                 );
             }
             
@@ -238,22 +239,25 @@ impl Cli {
 
             Commands::Remove { path, tags, fuzzy: _ } => {
                 let resolved_path = resolve_path(path.clone())?;
-                if !tags.is_empty() {
-                    db::remove_tags_from_path(&mut conn, &resolved_path, tags)?;
-                    println!("{} {} {} {}",
-                        "✓".green().bold(),
-                        "Removed tags from".green(),
-                        resolved_path.blue().underline(),
-                        format!("[{}]", tags.join(", ")).yellow()
-                    );
-                } else {
-                    db::remove_all_tags_from_path(&mut conn, &resolved_path)?;
-                    println!("{} {} {}",
-                        "✓".green().bold(),
-                        "Removed all tags from".green(),
-                        resolved_path.blue().underline()
-                    );
+                if let Some(tags) = tags {
+                    if !tags.is_empty() {
+                        let tags_vec = vec![tags.clone()];
+                        db::remove_tags_from_path(&mut conn, &resolved_path, &tags_vec)?;
+                        println!("{} {} {} {}",
+                            "✓".green().bold(),
+                            "Removed tags from".green(),
+                            resolved_path.blue().underline(),
+                            format!("[{}]", tags).yellow()
+                        );
+                        return Ok(());
+                    }
                 }
+                db::remove_all_tags_from_path(&mut conn, &resolved_path)?;
+                println!("{} {} {}",
+                    "✓".green().bold(),
+                    "Removed all tags from".green(),
+                    resolved_path.blue().underline()
+                );
             }
         }
         Ok(())
