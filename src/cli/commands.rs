@@ -4,7 +4,6 @@ use crate::utils::{now, resolve_path};
 use crate::error::Result;
 use super::args::{Cli, Commands};
 use colored::*;
-use std::collections::HashMap;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
@@ -50,7 +49,7 @@ pub fn run_cli() -> Result<()> {
 
 impl Cli {
     pub fn run(&self) -> Result<()> {
-        let mut conn = db::open_db("pathbrain.db")?;
+        let mut conn = db::open_db()?;
         let matcher = SkimMatcherV2::default();
 
         match &self.command {
@@ -116,79 +115,29 @@ impl Cli {
                     enhanced_entries.sort_by_key(|e| std::cmp::Reverse(e.freq));
                 }
 
-                let mut tag_groups: HashMap<String, Vec<&EnhancedPathEntry>> = HashMap::new();
-                let mut untagged = Vec::new();
-
+                println!("{}", "Paths:".green().bold());
                 for entry in &enhanced_entries {
-                    if entry.tags.is_empty() {
-                        untagged.push(entry);
+                    let freq_indicator = format_frequency(entry.freq);
+                    let time_ago = format_duration(entry.last_used);
+                    let tags_display = if !entry.tags.is_empty() {
+                        format!(" [{}]", entry.tags.join(", ")).yellow().to_string()
                     } else {
-                        for tag in &entry.tags {
-                            tag_groups.entry(tag.clone())
-                                .or_default()
-                                .push(entry);
-                        }
-                    }
-                }
-
-                let mut sorted_tags: Vec<_> = tag_groups.keys().collect();
-                sorted_tags.sort();
-
-                println!("{}", "Tagged Paths:".green().bold());
-                for tag in sorted_tags {
-                    println!("\n{} {}", "•".yellow(), tag.yellow().bold());
+                        " [untagged]".bright_black().to_string()
+                    };
+                    let score_display = if *fuzzy && pattern.is_some() {
+                        format!(" (score: {})", entry.score.unwrap_or(0))
+                    } else {
+                        String::new()
+                    };
                     
-                    let mut seen_paths = std::collections::HashSet::new();
-                    for entry in &tag_groups[tag] {
-                        if seen_paths.insert(&entry.path) {
-                            let freq_indicator = format_frequency(entry.freq);
-                            let time_ago = format_duration(entry.last_used);
-                            let other_tags: Vec<_> = entry.tags.iter()
-                                .filter(|t| *t != tag)
-                                .map(|s| s.as_str())
-                                .collect();
-                            let tags_display = if !other_tags.is_empty() {
-                                format!(" [{}]", other_tags.join(", ")).bright_black().to_string()
-                            } else {
-                                String::new()
-                            };
-                            let score_display = if *fuzzy && pattern.is_some() {
-                                format!(" (score: {})", entry.score.unwrap_or(0))
-                            } else {
-                                String::new()
-                            };
-                            
-                            println!("  {} {} {}{} {} {}",
-                                "└─".bright_black(),
-                                entry.path.blue().underline(),
-                                freq_indicator,
-                                tags_display,
-                                time_ago.bright_black().italic(),
-                                score_display.bright_black()
-                            );
-                        }
-                    }
-                }
-
-                if !untagged.is_empty() {
-                    println!("\n{}", "Untagged Paths:".red().bold());
-                    for entry in untagged {
-                        let freq_indicator = format_frequency(entry.freq);
-                        let time_ago = format_duration(entry.last_used);
-                        let score_display = if *fuzzy && pattern.is_some() {
-                            format!(" (score: {})", entry.score.unwrap_or(0))
-                        } else {
-                            String::new()
-                        };
-                        
-                        println!("  {} {} {} {} {}",
-                            "•".bright_black(),
-                            entry.path.blue().underline(),
-                            freq_indicator,
-                            time_ago.bright_black().italic(),
-                            score_display.bright_black()
-                        );
-                    }
+                    println!("{} {} {}{} {} {}",
+                        "•".bright_black(),
+                        entry.path.blue().underline(),
+                        freq_indicator,
+                        tags_display,
+                        time_ago.bright_black().italic(),
+                        score_display.bright_black()
+                    );
                 }
             }
             

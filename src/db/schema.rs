@@ -26,8 +26,7 @@ pub fn initialize_db() -> Result<Connection> {
     Ok(conn)
 }
 
-pub fn open_db(path: &str) -> Result<Connection> {
-    let conn = Connection::open(path)?;
+pub fn setup_schema(conn: &Connection) -> Result<()> {
     conn.execute_batch(SCHEMA)?;
-    Ok(conn)
+    Ok(())
 } 
