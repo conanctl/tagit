@@ -1,10 +1,10 @@
 use thiserror::Error;
 use std::io;
 
-pub type Result<T> = std::result::Result<T, PathBrainError>;
+pub type Result<T> = std::result::Result<T, TagItError>;
 
 #[derive(Error, Debug)]
-pub enum PathBrainError {
+pub enum TagItError {
     #[error("Database error: {0}")]
     Database(#[from] rusqlite::Error),
 
@@ -33,7 +33,7 @@ pub enum PathBrainError {
     Other(String),
 }
 
-impl PathBrainError {
+impl TagItError {
     pub fn user_friendly_message(&self) -> String {
         use colored::*;
         match self {

@@ -1,9 +1,9 @@
 [package]
-name = "pathbrain"
+name = "tagit"
 version = "0.1.0"
 edition = "2021"
-description = "A frictionless path management tool that helps you organize and find directories using tags"
-repository = "https://github.com/conanctl/tagit"
+description = "A frictionless file tagging tool that helps you organize and find any file using tags"
+repository = "https://github.com/conanctl/tagit" 
 keywords = ["cli", "filesystem", "organization", "tags", "utility"]
 categories = ["command-line-utilities", "filesystem"]
 readme = "README.md"
