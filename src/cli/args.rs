@@ -12,10 +12,10 @@ pub struct Cli {
 pub enum Commands {
     Tag {
         #[arg(required = true)]
-        tags: String,
+        path: String,
 
-        #[arg(short, long)]
-        path: Option<String>,
+        #[arg(required = true)]
+        message: String,
     },
     
     #[command(alias = "ls")]
