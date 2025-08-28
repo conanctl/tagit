@@ -6,23 +6,23 @@ fn parse_args(args: &[&str]) -> Cli {
 }
 
 #[test]
-fn test_tag_command() {
-    let cli = parse_args(&["tag", "tag", "/test/path", "need to implement caching"]);
+fn test_add_command() {
+    let cli = parse_args(&["tag", "add", "/test/path", "need to implement caching"]);
     match cli.command {
-        Commands::Tag { path, message } => {
+        Commands::Add { path, message } => {
             assert_eq!(path, "/test/path");
             assert_eq!(message, "need to implement caching");
         }
-        _ => panic!("Expected Tag command"),
+        _ => panic!("Expected Add command"),
     }
 
-    let cli = parse_args(&["tag", "tag", ".", "work in progress"]);
+    let cli = parse_args(&["tag", "add", ".", "work in progress"]);
     match cli.command {
-        Commands::Tag { path, message } => {
+        Commands::Add { path, message } => {
             assert_eq!(path, ".");
             assert_eq!(message, "work in progress");
         }
-        _ => panic!("Expected Tag command"),
+        _ => panic!("Expected Add command"),
     }
 }
 
@@ -112,25 +112,25 @@ fn test_remove_command() {
 
 #[test]
 fn test_special_characters_in_args() {
-    let cli = parse_args(&["tag", "tag", "/path with spaces/", "tag with spaces and @#$% symbols"]);
+    let cli = parse_args(&["tag", "add", "/path with spaces/", "tag with spaces and @#$% symbols"]);
     match cli.command {
-        Commands::Tag { path, message } => {
+        Commands::Add { path, message } => {
             assert_eq!(path, "/path with spaces/");
             assert_eq!(message, "tag with spaces and @#$% symbols");
         }
-        _ => panic!("Expected Tag command"),
+        _ => panic!("Expected Add command"),
     }
 }
 
 #[test]
 fn test_unicode_in_args() {
-    let cli = parse_args(&["tag", "tag", "/路径/パス/경로", "标签 タグ 태그"]);
+    let cli = parse_args(&["tag", "add", "/路径/パス/경로", "标签 タグ 태그"]);
     match cli.command {
-        Commands::Tag { path, message } => {
+        Commands::Add { path, message } => {
             assert_eq!(path, "/路径/パス/경로");
             assert_eq!(message, "标签 タグ 태그");
         }
-        _ => panic!("Expected Tag command"),
+        _ => panic!("Expected Add command"),
     }
 }
 
@@ -139,19 +139,19 @@ fn test_long_arguments() {
     let long_path = "/".repeat(100);
     let long_tag = "a".repeat(100);
     
-    let cli = parse_args(&["tag", "tag", &long_path, &long_tag]);
+    let cli = parse_args(&["tag", "add", &long_path, &long_tag]);
     match cli.command {
-        Commands::Tag { path, message } => {
+        Commands::Add { path, message } => {
             assert_eq!(path, long_path);
             assert_eq!(message, long_tag);
         }
-        _ => panic!("Expected Tag command"),
+        _ => panic!("Expected Add command"),
     }
 }
 
 #[test]
 fn test_command_error_cases() {
-    assert!(Cli::try_parse_from(&["tag", "tag"]).is_err());
+    assert!(Cli::try_parse_from(&["tag", "add"]).is_err());
     assert!(Cli::try_parse_from(&["tag", "search"]).is_err());
     assert!(Cli::try_parse_from(&["tag", "find"]).is_err());
 } 
