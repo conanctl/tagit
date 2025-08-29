@@ -50,7 +50,6 @@ pub fn run_cli() -> Result<()> {
 impl Cli {
     pub fn run(&self) -> Result<()> {
         let mut conn = db::open_db()?;
-        let matcher = SkimMatcherV2::default();
 
         match &self.command {
             Commands::Add { path, message } => {
@@ -65,20 +64,48 @@ impl Cli {
                 );
             }
             
-            Commands::List { pattern, fuzzy } => {
+            Commands::Ls { pattern } => {
                 let paths = db::list_paths(&conn)?;
                 let mut enhanced_entries = Vec::new();
+                let matcher = SkimMatcherV2::default();
                 
-                for path_entry in paths {
-                    let should_include = if let Some(ref pattern) = pattern {
-                        if *fuzzy {
-                            matcher.fuzzy_match(&path_entry.path, pattern).is_some()
-                        } else {
-                            path_entry.path.contains(pattern)
+                let matching_tag_paths = if let Some(ref pattern) = pattern {
+                    let all_tags = db::list_all_tags(&conn)?;
+                    let matching_tags: Vec<_> = all_tags.iter()
+                        .filter_map(|t| {
+                            matcher.fuzzy_match(t, pattern)
+                                .map(|score| (t, score))
+                        })
+                        .collect();
+
+                    let mut tag_paths = Vec::new();
+                    for (tag, score) in matching_tags {
+                        let paths = db::find_paths_by_tag(&conn, tag)?;
+                        for path in paths {
+                            tag_paths.push((path, score));
                         }
-                    } else {
-                        true
-                    };
+                    }
+                    Some(tag_paths)
+                } else {
+                    None
+                };
+
+                for path_entry in paths {
+                    let mut should_include = true;
+                    let mut path_score = None;
+
+                    if let Some(ref pattern) = pattern {
+                        path_score = matcher.fuzzy_match(&path_entry.path, pattern);
+                        should_include = path_score.is_some();
+                    }
+
+                    if let Some(ref tag_paths) = matching_tag_paths {
+                        if let Some((_, tag_score)) = tag_paths.iter()
+                            .find(|(p, _)| p.id == path_entry.id) {
+                            should_include = true;
+                            path_score = Some(*tag_score);
+                        }
+                    }
 
                     if should_include {
                         let raw_tags = db::get_tags_for_path(&conn, path_entry.id.unwrap())?;
@@ -86,36 +113,33 @@ impl Cli {
                             .flat_map(|t| t.split(','))
                             .map(|s| s.trim().to_string())
                             .collect();
-                        
-                        let score = if *fuzzy {
-                            pattern.as_ref()
-                                .and_then(|p| matcher.fuzzy_match(&path_entry.path, p))
-                        } else {
-                            None
-                        };
 
                         enhanced_entries.push(EnhancedPathEntry {
                             path: path_entry.path,
                             tags,
                             last_used: path_entry.last_used,
                             freq: path_entry.freq,
-                            score,
+                            score: path_score,
                         });
                     }
                 }
                 
                 if enhanced_entries.is_empty() {
-                    println!("{}", "No paths found".yellow());
+                    if let Some(ref p) = pattern {
+                        println!("{} {}", "No matches found for:".yellow(), p);
+                    } else {
+                        println!("{}", "No paths found".yellow());
+                    }
                     return Ok(());
                 }
 
-                if *fuzzy && pattern.is_some() {
+                if pattern.is_some() {
                     enhanced_entries.sort_by_key(|e| std::cmp::Reverse(e.score.unwrap_or(0)));
                 } else {
                     enhanced_entries.sort_by_key(|e| std::cmp::Reverse(e.freq));
                 }
 
-                println!("{}", "Paths:".green().bold());
+                println!("{}", if pattern.is_some() { "Matches:" } else { "Paths:" }.green().bold());
                 for entry in &enhanced_entries {
                     let freq_indicator = format_frequency(entry.freq);
                     let time_ago = format_duration(entry.last_used);
@@ -124,69 +148,18 @@ impl Cli {
                     } else {
                         " [untagged]".bright_black().to_string()
                     };
-                    let score_display = if *fuzzy && pattern.is_some() {
-                        format!(" (score: {})", entry.score.unwrap_or(0))
-                    } else {
-                        String::new()
-                    };
                     
-                    println!("{} {} {}{} {} {}",
+                    println!("{} {} {}{} {}",
                         "•".bright_black(),
                         entry.path.blue().underline(),
                         freq_indicator,
                         tags_display,
-                        time_ago.bright_black().italic(),
-                        score_display.bright_black()
+                        time_ago.bright_black().italic()
                     );
                 }
             }
             
-            Commands::Search { tag, scores } => {
-                let all_tags = db::list_all_tags(&conn)?;
-                let matching_tags: Vec<_> = all_tags.iter()
-                    .filter_map(|t| {
-                        matcher.fuzzy_match(t, tag)
-                            .map(|score| (t, score))
-                    })
-                    .collect();
-
-                if matching_tags.is_empty() {
-                    println!("{}", "No matching tags found".yellow());
-                    return Ok(());
-                }
-
-                let mut all_paths = Vec::new();
-                for (tag, score) in matching_tags {
-                    let paths = db::find_paths_by_tag(&conn, tag)?;
-                    for path in paths {
-                        let tags = db::get_tags_for_path(&conn, path.id.unwrap())?;
-                        all_paths.push((path, tags, score));
-                    }
-                }
-
-                all_paths.sort_by_key(|(path, _, score)| (-score, -path.freq));
-
-                for (path, tags, score) in all_paths {
-                    let freq_indicator = format_frequency(path.freq);
-                    let time_ago = format_duration(path.last_used);
-                    let score_display = if *scores {
-                        format!(" (score: {})", score)
-                    } else {
-                        String::new()
-                    };
-                    
-                    println!("{} {} {}{} {} {}",
-                        "•".bright_black(),
-                        path.path.blue().underline(),
-                        freq_indicator,
-                        format!(" [{}]", tags.join(", ")).yellow(),
-                        time_ago.bright_black().italic(),
-                        score_display.bright_black()
-                    );
-                }
-            }
-
-            Commands::Remove { path, tags, fuzzy: _ } => {
+            Commands::Rm { path, tags, fuzzy: _ } => {
                 let resolved_path = resolve_path(path.clone())?;
                 if let Some(tags) = tags {
                     if !tags.is_empty() {

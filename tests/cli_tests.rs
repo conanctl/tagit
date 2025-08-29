@@ -27,86 +27,44 @@ fn test_add_command() {
 }
 
 #[test]
-fn test_list_command() {
-    let cli = parse_args(&["tag", "list"]);
+fn test_ls_command() {
+    let cli = parse_args(&["tag", "ls"]);
     match cli.command {
-        Commands::List { pattern, fuzzy } => {
+        Commands::Ls { pattern } => {
             assert!(pattern.is_none());
-            assert!(!fuzzy);
         }
-        _ => panic!("Expected List command"),
-    }
-
-    let cli = parse_args(&["tag", "list", "filter"]);
-    match cli.command {
-        Commands::List { pattern, fuzzy } => {
-            assert_eq!(pattern.unwrap(), "filter");
-            assert!(!fuzzy);
-        }
-        _ => panic!("Expected List command"),
+        _ => panic!("Expected Ls command"),
     }
 
     let cli = parse_args(&["tag", "ls", "filter"]);
     match cli.command {
-        Commands::List { pattern, fuzzy } => {
+        Commands::Ls { pattern } => {
             assert_eq!(pattern.unwrap(), "filter");
-            assert!(!fuzzy);
         }
-        _ => panic!("Expected List command"),
+        _ => panic!("Expected Ls command"),
     }
 }
 
 #[test]
-fn test_search_command() {
-    let cli = parse_args(&["tag", "search", "searchtag"]);
+fn test_rm_command() {
+    let cli = parse_args(&["tag", "rm", "need to implement caching", "-p", "/test/path"]);
     match cli.command {
-        Commands::Search { tag, scores } => {
-            assert_eq!(tag, "searchtag");
-            assert!(!scores);
-        }
-        _ => panic!("Expected Search command"),
-    }
-
-    let cli = parse_args(&["tag", "find", "searchtag"]);
-    match cli.command {
-        Commands::Search { tag, scores } => {
-            assert_eq!(tag, "searchtag");
-            assert!(!scores);
-        }
-        _ => panic!("Expected Search command"),
-    }
-}
-
-#[test]
-fn test_remove_command() {
-    let cli = parse_args(&["tag", "remove", "need to implement caching", "-p", "/test/path"]);
-    match cli.command {
-        Commands::Remove { path, tags, fuzzy } => {
+        Commands::Rm { path, tags, fuzzy } => {
             assert_eq!(path, Some("/test/path".to_string()));
             assert_eq!(tags, Some("need to implement caching".to_string()));
             assert!(!fuzzy);
         }
-        _ => panic!("Expected Remove command"),
+        _ => panic!("Expected Rm command"),
     }
 
-    let cli = parse_args(&["tag", "remove"]);
+    let cli = parse_args(&["tag", "rm"]);
     match cli.command {
-        Commands::Remove { path, tags, fuzzy } => {
+        Commands::Rm { path, tags, fuzzy } => {
             assert!(path.is_none());
             assert!(tags.is_none());
             assert!(!fuzzy);
         }
-        _ => panic!("Expected Remove command"),
-    }
-
-    let cli = parse_args(&["tag", "untag", "work in progress", "--path", "/test/path"]);
-    match cli.command {
-        Commands::Remove { path, tags, fuzzy } => {
-            assert_eq!(path, Some("/test/path".to_string()));
-            assert_eq!(tags, Some("work in progress".to_string()));
-            assert!(!fuzzy);
-        }
-        _ => panic!("Expected Remove command"),
+        _ => panic!("Expected Rm command"),
     }
 }
 
@@ -152,6 +110,6 @@ fn test_long_arguments() {
 #[test]
 fn test_command_error_cases() {
     assert!(Cli::try_parse_from(&["tag", "add"]).is_err());
-    assert!(Cli::try_parse_from(&["tag", "search"]).is_err());
-    assert!(Cli::try_parse_from(&["tag", "find"]).is_err());
+    assert!(Cli::try_parse_from(&["tag", "list"]).is_err());
+    assert!(Cli::try_parse_from(&["tag", "remove"]).is_err());
 } 
