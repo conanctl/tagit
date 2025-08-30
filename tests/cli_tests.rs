@@ -1,5 +1,7 @@
 use tagit::cli::{Cli, Commands};
 use clap::Parser;
+use std::process::{Command, Stdio};
+use std::io::Write;
 
 fn parse_args(args: &[&str]) -> Cli {
     Cli::try_parse_from(args).unwrap()
@@ -112,4 +114,83 @@ fn test_command_error_cases() {
     assert!(Cli::try_parse_from(&["tag", "add"]).is_err());
     assert!(Cli::try_parse_from(&["tag", "list"]).is_err());
     assert!(Cli::try_parse_from(&["tag", "remove"]).is_err());
+}
+
+#[test]
+fn test_jump_command() {
+    let cli = parse_args(&["tag", "jump"]);
+    match cli.command {
+        Commands::Jump { pattern } => {
+            assert!(pattern.is_none());
+        }
+        _ => panic!("Expected Jump command"),
+    }
+
+    let cli = parse_args(&["tag", "jump", "project"]);
+    match cli.command {
+        Commands::Jump { pattern } => {
+            assert_eq!(pattern.unwrap(), "project");
+        }
+        _ => panic!("Expected Jump command"),
+    }
+}
+
+#[test]
+fn test_init_command() {
+    let cli = parse_args(&["tag", "init"]);
+    match cli.command {
+        Commands::Init { shell } => {
+            assert_eq!(shell, "zsh");
+        }
+        _ => panic!("Expected Init command"),
+    }
+
+    let cli = parse_args(&["tag", "init", "--shell", "bash"]);
+    match cli.command {
+        Commands::Init { shell } => {
+            assert_eq!(shell, "bash");
+        }
+        _ => panic!("Expected Init command"),
+    }
+}
+
+#[test]
+fn test_jump_integration() {
+    let mut cmd = Command::new("sh")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    let shell_script = r#"
+        eval "$(./target/debug/tagit init)"
+        mkdir -p test_dir
+        ./target/debug/tagit add test_dir "test tag"
+        echo "test_dir" | ./target/debug/tagit jump
+        pwd
+    "#;
+
+    cmd.stdin.as_mut().unwrap().write_all(shell_script.as_bytes()).unwrap();
+    let output = cmd.wait_with_output().unwrap();
+    let output_str = String::from_utf8_lossy(&output.stdout);
+    
+    assert!(output_str.contains("test_dir"));
+}
+
+#[test]
+fn test_init_output() {
+    let cli = parse_args(&["tag", "init"]);
+    match cli.command {
+        Commands::Init { shell } => {
+            assert!(shell == "zsh" || shell == "bash");
+            let output = Command::new("./target/debug/tagit")
+                .args(["init", "--shell", &shell])
+                .output()
+                .unwrap();
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            assert!(output_str.contains("function tag()"));
+            assert!(output_str.contains("eval"));
+        }
+        _ => panic!("Expected Init command"),
+    }
 } 
