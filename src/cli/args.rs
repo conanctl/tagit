@@ -35,9 +35,4 @@ pub enum Commands {
     Jump {
         pattern: Option<String>,
     },
-
-    Init {
-        #[arg(long, default_value = "zsh")]
-        shell: String,
-    },
 } 
