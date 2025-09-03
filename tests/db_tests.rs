@@ -116,8 +116,8 @@ fn test_error_cases() {
 
     assert!(db::get_path(&conn, "/nonexistent").unwrap().is_none());
 
-    let result = db::remove_all_tags_from_path(&mut conn, "/nonexistent");
-    assert!(matches!(result.unwrap_err(), TagItError::PathNotFound(_)));
+    let result = db::remove_path(&mut conn, "/nonexistent");
+    assert!(result.is_ok());
 
     let empty_tags: Vec<String> = vec![];
     db::create_path_tag_entry(&mut conn, "/test/path", &empty_tags, ts).unwrap();
@@ -154,22 +154,17 @@ fn test_remove_tags_from_path() {
 }
 
 #[test]
-fn test_remove_all_tags_from_path() {
+fn test_remove_path() {
     let mut conn = setup_test_env();
     let path = "/test/path";
     let ts = now();
     let initial_tags = vec!["tag1".to_string(), "tag2".to_string(), "tag3".to_string()];
 
     db::create_path_tag_entry(&mut conn, path, &initial_tags, ts).unwrap();
-    let path_record = db::get_path(&conn, path).unwrap().unwrap();
+    assert!(db::path_exists(&conn, path).unwrap());
 
-    let tags_before = db::get_tags_for_path(&conn, path_record.id.unwrap()).unwrap();
-    assert_eq!(tags_before.len(), 3);
-
-    db::remove_all_tags_from_path(&mut conn, path).unwrap();
-    
-    let tags_after = db::get_tags_for_path(&conn, path_record.id.unwrap()).unwrap();
-    assert!(tags_after.is_empty());
+    db::remove_path(&mut conn, path).unwrap();
+    assert!(!db::path_exists(&conn, path).unwrap());
 }
 
 #[test]
@@ -182,8 +177,8 @@ fn test_tag_removal_error_cases() {
     let result = db::remove_tags_from_path(&mut conn, nonexistent_path, &vec!["tag".to_string()]);
     assert!(matches!(result.unwrap_err(), TagItError::PathNotFound(_)));
 
-    let result = db::remove_all_tags_from_path(&mut conn, nonexistent_path);
-    assert!(matches!(result.unwrap_err(), TagItError::PathNotFound(_)));
+    let result = db::remove_path(&mut conn, nonexistent_path);
+    assert!(result.is_ok());
 
     db::create_path_tag_entry(&mut conn, path, &vec!["existing".to_string()], ts).unwrap();
     let result = db::remove_tags_from_path(&mut conn, path, &vec!["nonexistent".to_string()]);
@@ -218,21 +213,5 @@ fn test_tag_operations() {
     assert_eq!(path2_tags.len(), 1);
     assert!(path1_tags.contains(&"unique1".to_string()));
     assert!(path2_tags.contains(&"unique2".to_string()));
-}
-
-#[test]
-fn test_path_cleanup() {
-    let mut conn = setup_test_env();
-    let ts = now();
-    let path = "/test/cleanup/path";
-
-    db::create_path_tag_entry(&mut conn, path, &vec!["tag1".to_string(), "tag2".to_string()], ts).unwrap();
-    let path_record = db::get_path(&conn, path).unwrap().unwrap();
-
-    db::remove_all_tags_from_path(&mut conn, path).unwrap();
-    assert!(db::path_exists(&conn, path).unwrap());
-
-    let tags = db::get_tags_for_path(&conn, path_record.id.unwrap()).unwrap();
-    assert!(tags.is_empty());
 }
 

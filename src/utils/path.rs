@@ -28,9 +28,6 @@ pub fn resolve_path(path: Option<String>) -> Result<String> {
         env::current_dir()?.join(path)
     };
 
-    let path = path.canonicalize()
-        .map_err(|_| TagItError::InvalidPath(path.to_string_lossy().into_owned()))?;
-
     Ok(path.to_string_lossy().into_owned())
 }
 

@@ -47,22 +47,20 @@ fn test_ls_command() {
 
 #[test]
 fn test_rm_command() {
-    let cli = parse_args(&["tag", "rm", "need to implement caching", "-p", "/test/path"]);
+    let cli = parse_args(&["tag", "rm", "/test/path"]);
     match cli.command {
-        Commands::Rm { path, tags, fuzzy } => {
-            assert_eq!(path, Some("/test/path".to_string()));
-            assert_eq!(tags, Some("need to implement caching".to_string()));
-            assert!(!fuzzy);
+        Commands::Rm { path, tags } => {
+            assert_eq!(path, "/test/path");
+            assert!(tags.is_empty());
         }
         _ => panic!("Expected Rm command"),
     }
 
-    let cli = parse_args(&["tag", "rm"]);
+    let cli = parse_args(&["tag", "rm", "/test/path", "tag1", "tag2"]);
     match cli.command {
-        Commands::Rm { path, tags, fuzzy } => {
-            assert!(path.is_none());
-            assert!(tags.is_none());
-            assert!(!fuzzy);
+        Commands::Rm { path, tags } => {
+            assert_eq!(path, "/test/path");
+            assert_eq!(tags, vec!["tag1", "tag2"]);
         }
         _ => panic!("Expected Rm command"),
     }
