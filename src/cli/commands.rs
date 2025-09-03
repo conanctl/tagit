@@ -179,24 +179,98 @@ impl Cli {
                 }
             }
             
-            Commands::Rm { path, tags } => {
-                let resolved_path = resolve_path(Some(path.clone()))?;
+            Commands::Rm { pattern, tags } => {
+                let paths = db::list_paths(&conn)?;
+                let mut enhanced_entries = Vec::new();
+                let matcher = SkimMatcherV2::default();
+
+                for path_entry in paths {
+                    let mut should_include = pattern.is_none();
+                    let mut path_score = None;
+
+                    if let Some(ref p) = pattern {
+                        path_score = matcher.fuzzy_match(&path_entry.path, p);
+                        should_include = path_score.is_some();
+
+                        if !should_include {
+                            let path_tags = db::get_tags_for_path(&conn, path_entry.id.unwrap())?;
+                            for tag in path_tags {
+                                if let Some(score) = matcher.fuzzy_match(&tag, p) {
+                                    should_include = true;
+                                    path_score = Some(score);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if should_include {
+                        let raw_tags = db::get_tags_for_path(&conn, path_entry.id.unwrap())?;
+                        let entry_tags: Vec<String> = raw_tags.iter()
+                            .flat_map(|t| t.split(','))
+                            .map(|s| s.trim().to_string())
+                            .collect();
+
+                        enhanced_entries.push(EnhancedPathEntry {
+                            path: path_entry.path,
+                            tags: entry_tags,
+                            last_used: path_entry.last_used,
+                            freq: path_entry.freq,
+                            score: path_score,
+                        });
+                    }
+                }
+
+                if enhanced_entries.is_empty() {
+                    eprintln!("{}", "No paths found.".yellow());
+                    return Ok(());
+                }
+
+                enhanced_entries.sort_by_key(|e| std::cmp::Reverse(e.score.unwrap_or(e.freq)));
+
+                let entries: Vec<String> = enhanced_entries.iter()
+                    .map(format_path_for_fzf)
+                    .collect();
+
+                let entries_str = entries.join("\n");
                 
-                if tags.is_empty() {
-                    db::remove_path(&mut conn, &resolved_path)?;
-                    println!("{} {} {}",
-                        "✓".green().bold(),
-                        "Removed entry".green(),
-                        format_path_for_display(&resolved_path).blue().underline()
-                    );
-                } else {
-                    db::remove_tags_from_path(&mut conn, &resolved_path, &tags)?;
-                    println!("{} {} {} {}",
-                        "✓".green().bold(),
-                        "Removed tags from".green(),
-                        format_path_for_display(&resolved_path).blue().underline(),
-                        format!("[{}]", tags.join(", ")).yellow()
-                    );
+                let mut fzf = Command::new("fzf")
+                    .arg("--ansi")
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn()?;
+
+                if let Some(mut stdin) = fzf.stdin.take() {
+                    use std::io::Write;
+                    stdin.write_all(entries_str.as_bytes())?;
+                }
+
+                let output = fzf.wait_with_output()?;
+                
+                if !output.status.success() {
+                    return Ok(());
+                }
+
+                if let Ok(selected) = String::from_utf8(output.stdout) {
+                    if let Some(path_str) = selected.split_whitespace().next() {
+                        let resolved_path = resolve_path(Some(path_str.to_string()))?;
+                        if tags.is_empty() {
+                            db::remove_path(&mut conn, &resolved_path)?;
+                            println!("{} {} {}",
+                                "✓".green().bold(),
+                                "Removed entry".green(),
+                                format_path_for_display(&resolved_path).blue().underline()
+                            );
+                        } else {
+                            db::remove_tags_from_path(&mut conn, &resolved_path, &tags)?;
+                            println!("{} {} {} {}",
+                                "✓".green().bold(),
+                                "Removed tags from".green(),
+                                format_path_for_display(&resolved_path).blue().underline(),
+                                format!("[{}]", tags.join(", ")).yellow()
+                            );
+                        }
+                    }
                 }
             }
 

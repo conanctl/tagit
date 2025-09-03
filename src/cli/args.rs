@@ -23,9 +23,9 @@ pub enum Commands {
     },
     
     Rm {
-        #[arg(required = true)]
-        path: String,
+        pattern: Option<String>,
 
+        #[arg(verbatim_doc_comment)]
         tags: Vec<String>,
     },
 

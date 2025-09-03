@@ -47,20 +47,29 @@ fn test_ls_command() {
 
 #[test]
 fn test_rm_command() {
-    let cli = parse_args(&["tag", "rm", "/test/path"]);
+    let cli = parse_args(&["tag", "rm", "test"]);
     match cli.command {
-        Commands::Rm { path, tags } => {
-            assert_eq!(path, "/test/path");
+        Commands::Rm { pattern, tags } => {
+            assert_eq!(pattern, Some("test".to_string()));
             assert!(tags.is_empty());
         }
         _ => panic!("Expected Rm command"),
     }
 
-    let cli = parse_args(&["tag", "rm", "/test/path", "tag1", "tag2"]);
+    let cli = parse_args(&["tag", "rm", "test", "tag1", "tag2"]);
     match cli.command {
-        Commands::Rm { path, tags } => {
-            assert_eq!(path, "/test/path");
+        Commands::Rm { pattern, tags } => {
+            assert_eq!(pattern, Some("test".to_string()));
             assert_eq!(tags, vec!["tag1", "tag2"]);
+        }
+        _ => panic!("Expected Rm command"),
+    }
+
+    let cli = parse_args(&["tag", "rm"]);
+    match cli.command {
+        Commands::Rm { pattern, tags } => {
+            assert!(pattern.is_none());
+            assert!(tags.is_empty());
         }
         _ => panic!("Expected Rm command"),
     }
