@@ -27,3 +27,7 @@ shell-escape = "0.1.5"
 tempfile = "3.8.1"
 assert_cmd = "2.0.12"
 predicates = "3.0.4"
+
+[[bin]]
+name = "tag"
+path = "src/main.rs"
