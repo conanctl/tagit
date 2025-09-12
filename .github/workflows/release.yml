@@ -1,0 +1,57 @@
+name: build-and-release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Add target
+      run: rustup target add ${{ matrix.target }}
+
+    - name: Setup x86_64 musl toolchain
+      if: matrix.target == 'x86_64-unknown-linux-musl'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y musl-tools
+
+    - name: Build
+      env:
+        CC_x86_64_unknown_linux_musl: musl-gcc
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Package
+      run: |
+        BIN=tag
+        TGT="${{ matrix.target }}"
+        mkdir -p dist
+        cp "target/$TGT/release/$BIN" dist/
+        cd dist
+        tar czf "$BIN-$TGT.tar.gz" "$BIN"
+
+    - name: Upload to release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/tag-${{ matrix.target }}.tar.gz
+        prerelease: false
