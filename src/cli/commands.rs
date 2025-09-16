@@ -18,6 +18,41 @@ struct EnhancedPathEntry {
     score: Option<i64>,
 }
 
+fn extract_path_from_fzf_selection(selection: &str) -> Option<String> {
+    if let Some(tags_end) = selection.rfind("] ") {
+        let before_time = &selection[..tags_end + 1];
+        
+        if let Some(tags_start) = before_time.rfind(" [") {
+            let path_and_freq = &before_time[..tags_start];
+            
+            let path = path_and_freq
+                .trim_end_matches(" ★★★")
+                .trim_end_matches(" ★★")
+                .trim_end_matches(" ★")
+                .trim();
+            
+            return Some(path.to_string());
+        }
+    }
+    
+    let tokens: Vec<&str> = selection.split_whitespace().collect();
+    if tokens.len() >= 3 {
+        if let Some(last) = tokens.last() {
+            if last.contains("ago") || *last == "now" {
+                let path_part = tokens[..tokens.len()-1].join(" ");
+                let path = path_part
+                    .trim_end_matches(" ★★★")
+                    .trim_end_matches(" ★★")
+                    .trim_end_matches(" ★")
+                    .trim();
+                return Some(path.to_string());
+            }
+        }
+    }
+    
+    selection.split_whitespace().next().map(|s| s.to_string())
+}
+
 fn format_duration(timestamp: i64) -> String {
     let now = now();
     let duration = now - timestamp;
@@ -252,8 +287,8 @@ impl Cli {
                 }
 
                 if let Ok(selected) = String::from_utf8(output.stdout) {
-                    if let Some(path_str) = selected.split_whitespace().next() {
-                        let resolved_path = resolve_path(Some(path_str.to_string()))?;
+                    if let Some(path_str) = extract_path_from_fzf_selection(&selected.trim()) {
+                        let resolved_path = resolve_path(Some(path_str))?;
                         if tags.is_empty() {
                             db::remove_path(&mut conn, &resolved_path)?;
                             println!("{} {} {}",
@@ -299,18 +334,14 @@ function tag() {{
                 let matcher = SkimMatcherV2::default();
                 
                 for path_entry in paths {
-                    let resolved_path = resolve_path(Some(path_entry.path.clone()))?;
-                    let path = Path::new(&resolved_path);
-                    
-                    if !path.exists() || !path.is_dir() {
-                        continue;
-                    }
+                    let path = Path::new(&path_entry.path);
+                    let _ = path;
 
                     let mut should_include = true;
                     let mut path_score = None;
 
                     if let Some(ref pattern) = pattern {
-                        path_score = matcher.fuzzy_match(&resolved_path, pattern);
+                        path_score = matcher.fuzzy_match(&path_entry.path, pattern);
                         should_include = path_score.is_some();
 
                         if !should_include {
@@ -333,7 +364,7 @@ function tag() {{
                             .collect();
 
                         enhanced_entries.push(EnhancedPathEntry {
-                            path: resolved_path,
+                            path: path_entry.path,
                             tags,
                             last_used: path_entry.last_used,
                             freq: path_entry.freq,
@@ -344,9 +375,9 @@ function tag() {{
 
                 if enhanced_entries.is_empty() {
                     if let Some(ref p) = pattern {
-                        eprintln!("{} {}", "No matching directories found for:".yellow(), p);
+                        eprintln!("{} {}", "No matching paths found for:".yellow(), p);
                     } else {
-                        eprintln!("{}", "No tagged directories found".yellow());
+                        eprintln!("{}", "No tagged paths found".yellow());
                     }
                     println!(":");
                     return Ok(());
@@ -375,9 +406,31 @@ function tag() {{
                 
                 if output.status.success() {
                     if let Ok(selected) = String::from_utf8(output.stdout) {
-                        if let Some(dir) = selected.split_whitespace().next() {
-                            println!("cd {}", shell_escape::escape(dir.into()));
-                            println!("echo '🚀 Jumped to {}'", shell_escape::escape(dir.into()));
+                        if let Some(selected_path) = extract_path_from_fzf_selection(&selected.trim()) {
+                            let resolved_selected_path = if selected_path.starts_with('~') {
+                                resolve_path(Some(selected_path.clone()))?
+                            } else {
+                                selected_path.clone()
+                            };
+                            
+                            let path = Path::new(&resolved_selected_path);
+                            let target_dir = if path.is_dir() {
+                                resolved_selected_path.clone()
+                            } else {
+                                path.parent()
+                                    .map(|p| p.to_string_lossy().to_string())
+                                    .unwrap_or_else(|| resolved_selected_path.clone())
+                            };
+                            
+                            println!("cd {}", shell_escape::escape(target_dir.clone().into()));
+                            if path.is_file() {
+                                println!("echo '🚀 Jumped to {} (parent of {})'", 
+                                    shell_escape::escape(format_path_for_display(&target_dir).into()),
+                                    shell_escape::escape(format_path_for_display(&resolved_selected_path).into())
+                                );
+                            } else {
+                                println!("echo '🚀 Jumped to {}'", shell_escape::escape(format_path_for_display(&target_dir).into()));
+                            }
                         } else {
                             println!(":");
                         }
