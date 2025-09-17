@@ -88,12 +88,12 @@ fn format_path_for_fzf(entry: &EnhancedPathEntry) -> String {
     let freq_indicator = format_frequency(entry.freq);
     let time_ago = format_duration(entry.last_used);
     let tags_display = if !entry.tags.is_empty() {
-        format!(" [{}]", entry.tags.join(", "))
+        format!("\x1b[38;2;97;175;239m [{}]\x1b[0m", entry.tags.join(", "))
     } else {
-        " [untagged]".to_string()
+        format!("\x1b[38;2;92;99;112m [untagged]\x1b[0m")
     };
     
-    format!("{}{}{} {}", 
+    format!("\x1b[38;2;224;108;117;4m{}\x1b[0m{}{} \x1b[38;2;92;99;112;3m{}\x1b[0m", 
         format_path_for_display(&entry.path),
         freq_indicator,
         tags_display,
@@ -397,6 +397,9 @@ function tag() {{
                 
                 let mut fzf = Command::new("fzf")
                     .arg("--ansi")
+                    .arg("--color=fg:-1,bg:-1")
+                    .arg("--color=hl:bright-red,fg+:-1,bg+:bright-black,hl+:bright-red")
+                    .arg("--color=pointer:yellow,marker:yellow")
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())
                     .spawn()?;
