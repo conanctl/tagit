@@ -69,14 +69,18 @@ fn format_duration(timestamp: i64) -> String {
 }
 
 fn format_frequency(freq: i64) -> String {
+    let star = |n: usize| {
+        let s = "★".repeat(n);
+        format!(" {}", s).truecolor(229,192,123).bold().to_string()
+    };
     if freq < 5 {
         "".to_string()
     } else if freq < 10 {
-        " ★".yellow().bold().to_string()
+        star(1)
     } else if freq < 20 {
-        " ★★".yellow().bold().to_string()
+        star(2)
     } else {
-        " ★★★".yellow().bold().to_string()
+        star(3)
     }
 }
 
@@ -112,10 +116,10 @@ impl Cli {
                 let tags_vec = vec![message.clone()];
                 db::create_path_tag_entry(&mut conn, &resolved_path, &tags_vec, now())?;
                 println!("{} {} {} {}", 
-                    "✓".green().bold(),
-                    "Tagged".green(),
-                    format_path_for_display(&resolved_path).blue().underline(),
-                    format!("[{}]", message).yellow()
+                    "✓".truecolor(152,195,121).bold(),
+                    "Tagged".truecolor(152,195,121),
+                    format_path_for_display(&resolved_path).truecolor(224,108,117).underline(),
+                    format!("[{}]", message).truecolor(97,175,239)
                 );
             }
             
@@ -194,22 +198,22 @@ impl Cli {
                     enhanced_entries.sort_by_key(|e| std::cmp::Reverse(e.freq));
                 }
 
-                println!("{}", if pattern.is_some() { "Matches:" } else { "Paths:" }.green().bold());
+                println!("{}", if pattern.is_some() { "Matches:" } else { "Paths:" }.truecolor(86,182,194).bold());
                 for entry in &enhanced_entries {
                     let freq_indicator = format_frequency(entry.freq);
                     let time_ago = format_duration(entry.last_used);
                     let tags_display = if !entry.tags.is_empty() {
-                        format!(" [{}]", entry.tags.join(", ")).yellow().to_string()
+                        format!(" [{}]", entry.tags.join(", ")).truecolor(97,175,239).to_string()
                     } else {
-                        " [untagged]".bright_black().to_string()
+                        " [untagged]".truecolor(92,99,112).to_string()
                     };
                     
                     println!("{} {} {}{} {}",
-                        "•".bright_black(),
-                        format_path_for_display(&entry.path).blue().underline(),
+                        "•".truecolor(92,99,112),
+                        format_path_for_display(&entry.path).truecolor(224,108,117).underline(),
                         freq_indicator,
                         tags_display,
-                        time_ago.bright_black().italic()
+                        time_ago.truecolor(92,99,112).italic()
                     );
                 }
             }
