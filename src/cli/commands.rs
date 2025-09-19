@@ -291,23 +291,27 @@ impl Cli {
                 }
 
                 if let Ok(selected) = String::from_utf8(output.stdout) {
-                    if let Some(path_str) = extract_path_from_fzf_selection(&selected.trim()) {
-                        let resolved_path = resolve_path(Some(path_str))?;
-                        if tags.is_empty() {
-                            db::remove_path(&mut conn, &resolved_path)?;
-                            println!("{} {} {}",
-                                "✓".green().bold(),
-                                "Removed entry".green(),
-                                format_path_for_display(&resolved_path).blue().underline()
-                            );
-                        } else {
-                            db::remove_tags_from_path(&mut conn, &resolved_path, &tags)?;
-                            println!("{} {} {} {}",
-                                "✓".green().bold(),
-                                "Removed tags from".green(),
-                                format_path_for_display(&resolved_path).blue().underline(),
-                                format!("[{}]", tags.join(", ")).yellow()
-                            );
+                    if let Some(displayed_path) = extract_path_from_fzf_selection(&selected.trim()) {
+                        if let Some(matching_entry) = enhanced_entries.iter()
+                            .find(|entry| format_path_for_display(&entry.path) == displayed_path) {
+                            let original_path = &matching_entry.path;
+                            
+                            if tags.is_empty() {
+                                db::remove_path(&mut conn, original_path)?;
+                                println!("{} {} {}",
+                                    "✓".green().bold(),
+                                    "Removed entry".green(),
+                                    format_path_for_display(original_path).blue().underline()
+                                );
+                            } else {
+                                db::remove_tags_from_path(&mut conn, original_path, &tags)?;
+                                println!("{} {} {} {}",
+                                    "✓".green().bold(),
+                                    "Removed tags from".green(),
+                                    format_path_for_display(original_path).blue().underline(),
+                                    format!("[{}]", tags.join(", ")).yellow()
+                                );
+                            }
                         }
                     }
                 }
