@@ -28,6 +28,11 @@ pub fn resolve_path(path: Option<String>) -> Result<String> {
         env::current_dir()?.join(path)
     };
 
+    let path = match path.canonicalize() {
+        Ok(canonical) => canonical,
+        Err(_) => path,
+    };
+
     Ok(path.to_string_lossy().into_owned())
 }
 
