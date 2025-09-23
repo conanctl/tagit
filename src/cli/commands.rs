@@ -7,8 +7,9 @@ use colored::*;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use std::path::Path;
-use std::process::{Command, Stdio};
 use shell_escape;
+use skim::prelude::{Skim, SkimItemReader, SkimOptionsBuilder};
+use std::io::Cursor;
 
 struct EnhancedPathEntry {
     path: String,
@@ -69,33 +70,21 @@ fn format_duration(timestamp: i64) -> String {
 }
 
 fn format_frequency(freq: i64) -> String {
-    let star = |n: usize| {
-        let s = "★".repeat(n);
-        format!(" {}", s).truecolor(229,192,123).bold().to_string()
-    };
-    if freq < 5 {
-        "".to_string()
-    } else if freq < 10 {
-        star(1)
-    } else if freq < 20 {
-        star(2)
-    } else {
-        star(3)
-    }
+    String::new()
 }
 
 fn format_path_for_fzf(entry: &EnhancedPathEntry) -> String {
-    let freq_indicator = format_frequency(entry.freq);
+    let plain_freq = String::new();
     let time_ago = format_duration(entry.last_used);
     let tags_display = if !entry.tags.is_empty() {
-        format!("\x1b[38;2;97;175;239m [{}]\x1b[0m", entry.tags.join(", "))
+        format!(" [{}]", entry.tags.join(", "))
     } else {
-        format!("\x1b[38;2;92;99;112m [untagged]\x1b[0m")
+        " [untagged]".to_string()
     };
-    
-    format!("\x1b[38;2;224;108;117;4m{}\x1b[0m{}{} \x1b[38;2;92;99;112;3m{}\x1b[0m", 
+    format!(
+        "{}{}{} {}",
         format_path_for_display(&entry.path),
-        freq_indicator,
+        plain_freq,
         tags_display,
         time_ago
     )
@@ -121,7 +110,7 @@ impl Cli {
                     format_path_for_display(&resolved_path).truecolor(224,108,117).underline(),
                     format!("[{}]", message).truecolor(97,175,239)
                 );
-            }
+            },
             
             Commands::Ls { pattern } => {
                 let paths = db::list_paths(&conn)?;
@@ -216,7 +205,7 @@ impl Cli {
                         time_ago.truecolor(92,99,112).italic()
                     );
                 }
-            }
+            },
             
             Commands::Rm { pattern, tags } => {
                 let paths = db::list_paths(&conn)?;
@@ -272,50 +261,46 @@ impl Cli {
                     .collect();
 
                 let entries_str = entries.join("\n");
-                
-                let mut fzf = Command::new("fzf")
-                    .arg("--ansi")
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn()?;
 
-                if let Some(mut stdin) = fzf.stdin.take() {
-                    use std::io::Write;
-                    stdin.write_all(entries_str.as_bytes())?;
-                }
+                let options = SkimOptionsBuilder::default()
+                    .multi(false)
+                    .build()
+                    .unwrap();
 
-                let output = fzf.wait_with_output()?;
-                
-                if !output.status.success() {
-                    return Ok(());
-                }
+                let item_reader = SkimItemReader::default();
+                let input = item_reader.of_bufread(Cursor::new(entries_str));
+                let output = Skim::run_with(&options, Some(input));
 
-                if let Ok(selected) = String::from_utf8(output.stdout) {
-                    if let Some(displayed_path) = extract_path_from_fzf_selection(&selected.trim()) {
-                        if let Some(matching_entry) = enhanced_entries.iter()
-                            .find(|entry| format_path_for_display(&entry.path) == displayed_path) {
-                            let original_path = &matching_entry.path;
-                            
-                            if tags.is_empty() {
-                                db::remove_path(&mut conn, original_path)?;
-                                println!("{} {} {}",
-                                    "✓".green().bold(),
-                                    "Removed entry".green(),
-                                    format_path_for_display(original_path).blue().underline()
-                                );
-                            } else {
-                                db::remove_tags_from_path(&mut conn, original_path, &tags)?;
-                                println!("{} {} {} {}",
-                                    "✓".green().bold(),
-                                    "Removed tags from".green(),
-                                    format_path_for_display(original_path).blue().underline(),
-                                    format!("[{}]", tags.join(", ")).yellow()
-                                );
+                if let Some(out) = output {
+                    if let Some(selected) = out.selected_items.get(0) {
+                        let selected_line = selected.output();
+                        let selected_str = selected_line.as_ref();
+                        if let Some(displayed_path) = extract_path_from_fzf_selection(selected_str.trim()) {
+                            if let Some(matching_entry) = enhanced_entries.iter()
+                                .find(|entry| format_path_for_display(&entry.path) == displayed_path) {
+                                let original_path = &matching_entry.path;
+                                
+                                if tags.is_empty() {
+                                    db::remove_path(&mut conn, original_path)?;
+                                    println!("{} {} {}",
+                                        "✓".green().bold(),
+                                        "Removed entry".green(),
+                                        format_path_for_display(original_path).blue().underline()
+                                    );
+                                } else {
+                                    db::remove_tags_from_path(&mut conn, original_path, &tags)?;
+                                    println!("{} {} {} {}",
+                                        "✓".green().bold(),
+                                        "Removed tags from".green(),
+                                        format_path_for_display(original_path).blue().underline(),
+                                        format!("[{}]", tags.join(", ")).yellow()
+                                    );
+                                }
                             }
                         }
                     }
                 }
-            }
+            },
 
             Commands::Jump { pattern } => {
                 if std::env::var("TAGIT_SHELL_INTEGRATION").is_err() {
@@ -398,26 +383,22 @@ function tag() {{
                     .collect();
 
                 let entries_str = entries.join("\n");
-                
-                let mut fzf = Command::new("fzf")
-                    .arg("--ansi")
-                    .arg("--color=fg:-1,bg:-1")
-                    .arg("--color=hl:bright-red,fg+:-1,bg+:bright-black,hl+:bright-red")
-                    .arg("--color=pointer:yellow,marker:yellow")
-                    .stdin(Stdio::piped())
-                    .stdout(Stdio::piped())
-                    .spawn()?;
 
-                if let Some(mut stdin) = fzf.stdin.take() {
-                    use std::io::Write;
-                    stdin.write_all(entries_str.as_bytes())?;
-                }
+                let options = SkimOptionsBuilder::default()
+                    .multi(false)
+                    .color(Some("fg:-1,bg:-1,hl:bright-red,fg+:-1,bg+:bright-black,hl+:bright-red,pointer:yellow,marker:yellow"))
+                    .build()
+                    .unwrap();
 
-                let output = fzf.wait_with_output()?;
-                
-                if output.status.success() {
-                    if let Ok(selected) = String::from_utf8(output.stdout) {
-                        if let Some(selected_path) = extract_path_from_fzf_selection(&selected.trim()) {
+                let item_reader = SkimItemReader::default();
+                let input = item_reader.of_bufread(Cursor::new(entries_str));
+                let output = Skim::run_with(&options, Some(input));
+
+                if let Some(out) = output {
+                    if let Some(selected) = out.selected_items.get(0) {
+                        let selected_line = selected.output();
+                        let selected_str = selected_line.as_ref();
+                        if let Some(selected_path) = extract_path_from_fzf_selection(selected_str.trim()) {
                             let resolved_selected_path = if selected_path.starts_with('~') {
                                 resolve_path(Some(selected_path.clone()))?
                             } else {
@@ -435,16 +416,18 @@ function tag() {{
                             
                             println!("cd {}", shell_escape::escape(target_dir.clone().into()));
                             if path.is_file() {
-                                println!("echo '🚀 Jumped to {} (parent of {})'", 
+                                println!("echo 'Jumped to {} (parent of {})'", 
                                     shell_escape::escape(format_path_for_display(&target_dir).into()),
                                     shell_escape::escape(format_path_for_display(&resolved_selected_path).into())
                                 );
                             } else {
-                                println!("echo '🚀 Jumped to {}'", shell_escape::escape(format_path_for_display(&target_dir).into()));
+                                println!("echo 'Jumped to {}'", shell_escape::escape(format_path_for_display(&target_dir).into()));
                             }
                         } else {
                             println!(":");
                         }
+                    } else {
+                        println!(":");
                     }
                 } else {
                     println!(":");
